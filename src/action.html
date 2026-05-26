@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #1a1a2e;
+      color: white;
+      gap: 16px;
+    }
+    #status { font-size: 1.1rem; }
+    #pauseBtn {
+      padding: 12px 32px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .paused { background: #e74c3c; color: white; }
+    .running { background: #2ecc71; color: white; }
+    #error { color: #e74c3c; font-size: 0.8rem; text-align: center; padding: 8px; }
+  </style>
+</head>
+<body>
+  <div id="status">Loading...</div>
+  <button id="pauseBtn" disabled>Loading...</button>
+  <div id="error"></div>
+
+  <script type="module">
+    import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
+
+    const METADATA_KEY = "com.natwork.dmpause/paused";
+
+    async function lockAllItems(lock) {
+      const items = await OBR.scene.items.getAll();
+      if (items.length === 0) return;
+      await OBR.scene.items.updateItems(items, (all) => {
+        for (const item of all) {
+          item.locked = lock;
+        }
+      });
+    }
+
+    function updateUI(isPaused) {
+      const btn = document.getElementById("pauseBtn");
+      const status = document.getElementById("status");
+      if (isPaused) {
+        btn.textContent = "▶ Resume";
+        btn.className = "paused";
+        status.textContent = "🔴 Game is PAUSED";
+      } else {
+        btn.textContent = "⏸ Pause";
+        btn.className = "running";
+        status.textContent = "🟢 Game is Running";
+      }
+    }
+
+    OBR.onReady(async () => {
+      const role = await OBR.player.getRole();
+      if (role !== "GM") {
+        document.body.innerHTML = "<p style='color:white;padding:16px'>Only the GM can use this.</p>";
+        return;
+      }
+
+      const metadata = await OBR.room.getMetadata();
+      let isPaused = metadata[METADATA_KEY] ?? false;
+      updateUI(isPaused);
+
+      const btn = document.getElementById("pauseBtn");
+      btn.disabled = false;
+
+      OBR.room.onMetadataChange((meta) => {
+        isPaused = meta[METADATA_KEY] ?? false;
+        updateUI(isPaused);
+      });
+
+      btn.addEventListener("click", async () => {
+        isPaused = !isPaused;
+        await OBR.room.setMetadata({ [METADATA_KEY]: isPaused });
+        await lockAllItems(isPaused);
+        OBR.notification.show(
+          isPaused ? "⏸ Game Paused! Players cannot move tokens." : "▶ Game Resumed!",
+          isPaused ? "WARNING" : "SUCCESS"
+        );
+      });
+    });
+  </script>
+</body>
+</html>
