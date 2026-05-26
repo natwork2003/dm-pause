@@ -39,28 +39,27 @@
     const METADATA_KEY = "com.natwork.dmpause/paused";
 
     async function lockAllItems(lock) {
-      const items = await OBR.scene.items.getAll();
-      if (items.length === 0) return;
-      await OBR.scene.items.updateItems(items, (all) => {
-        for (const item of all) {
-          item.locked = lock;
-        }
-      });
-    }
+  const myId = await OBR.player.getId();
+  const items = await OBR.scene.items.getAll();
+  
+  // เอาเฉพาะ token ที่ไม่ใช่ของ GM และอยู่บน CHARACTER layer
+  const playerItems = items.filter(item => 
+    item.layer === "CHARACTER" && item.createdUserId !== myId
+  );
 
-    function updateUI(isPaused) {
-      const btn = document.getElementById("pauseBtn");
-      const status = document.getElementById("status");
-      if (isPaused) {
-        btn.textContent = "▶ Resume";
-        btn.className = "paused";
-        status.textContent = "🔴 Game is PAUSED";
-      } else {
-        btn.textContent = "⏸ Pause";
-        btn.className = "running";
-        status.textContent = "🟢 Game is Running";
-      }
+  if (playerItems.length === 0) {
+    document.getElementById("error").textContent = "No player tokens found!";
+    return;
+  }
+
+  document.getElementById("error").textContent = "";
+  
+  await OBR.scene.items.updateItems(playerItems, (all) => {
+    for (const item of all) {
+      item.locked = lock;
     }
+  });
+}
 
     OBR.onReady(async () => {
       const role = await OBR.player.getRole();
