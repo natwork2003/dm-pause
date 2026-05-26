@@ -3,21 +3,16 @@
   "description": "Allows the DM to pause player token movement",
   "author": "YourName",
   "version": "1.0.0",
-  "listing": {
-    "name": "DM Pause",
-    "description": "DM can pause all player token movement",
-    "preview": ""
-  },
   "action": {
     "title": "DM Pause",
     "icon": "/pause-icon.svg",
     "popover": {
-      "url": "/src/action.html",
+      "url": "https://YOUR_USERNAME.github.io/dm-pause/src/action.html",
       "height": 200,
       "width": 250
     }
   },
   "background": {
-    "url": "/src/background.js"
+    "url": "https://YOUR_USERNAME.github.io/dm-pause/src/background.js"
   }
 }
