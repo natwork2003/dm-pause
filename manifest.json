@@ -3,7 +3,7 @@
   "name": "DM Pause",
   "description": "Allows the DM to pause player token movement",
   "author": "YourName",
-  "version": 1.0.0,
+  "version": "1.0.0",
   "action": {
     "title": "DM Pause",
     "icon": "/pause-icon.svg",
