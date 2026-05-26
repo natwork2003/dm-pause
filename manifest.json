@@ -6,14 +6,10 @@
   "version": "1.0.0",
   "action": {
     "title": "DM Pause",
-    "icon": "/pause-icon.svg",
-    "popover": {
-      "url": "https://natwork2003.github.io/dm-pause/src/action.html",
-      "height": 200,
-      "width": 250
-    }
+    "icon": "https://natwork2003.github.io/dm-pause/pause-icon.svg",
+    "popover": "https://natwork2003.github.io/dm-pause/src/action.html",
+    "height": 200,
+    "width": 250
   },
-  "background": {
-    "url": "https://natwork2003.github.io/dm-pause/src/background.js"
-  }
+  "background": "https://natwork2003.github.io/dm-pause/src/background.js"
 }
