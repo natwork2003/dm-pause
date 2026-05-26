@@ -7,12 +7,12 @@
     "title": "DM Pause",
     "icon": "/pause-icon.svg",
     "popover": {
-      "url": "https://YOUR_USERNAME.github.io/dm-pause/src/action.html",
+      "url": "https://natwork2003.github.io/dm-pause/src/action.html",
       "height": 200,
       "width": 250
     }
   },
   "background": {
-    "url": "https://YOUR_USERNAME.github.io/dm-pause/src/background.js"
+    "url": "https://natwork2003.github.io/dm-pause/src/background.js"
   }
 }
