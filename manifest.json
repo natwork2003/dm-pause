@@ -1,12 +1,9 @@
 {
-  
   "name": "DM Pause",
   "version": "1.0.0",
   "manifest_version": 1,
   "description": "Allows the DM to pause player token movement",
   "author": "YourName",
-  
-
   "action": {
     "title": "DM Pause",
     "icon": "https://natwork2003.github.io/dm-pause/pause-icon.svg",
