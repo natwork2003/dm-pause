@@ -54,6 +54,7 @@
     }
 
     OBR.onReady(async () => {
+      console.log("items API:", Object.keys(OBR.scene.items)); // เพิ่มบรรทัดนี้
       const role = await OBR.player.getRole();
 
       if (role !== "GM") {
@@ -74,7 +75,7 @@
         isPaused = !isPaused;
         await OBR.room.setMetadata({ [METADATA_KEY]: isPaused });
 
-        const items = await OBR.scene.items.getAll();
+        const items = await OBR.scene.items.getItems();
         const targets = items.filter(i => i.layer === "CHARACTER");
         if (targets.length > 0) {
           await OBR.scene.items.updateItems(targets, (all) => {
