@@ -13,8 +13,9 @@
       background: #1a1a2e;
       color: white;
       gap: 16px;
+      padding: 16px;
     }
-    #status { font-size: 1.1rem; }
+    #status { font-size: 1rem; text-align: center; }
     #pauseBtn {
       padding: 12px 32px;
       font-size: 1rem;
@@ -22,74 +23,86 @@
       border-radius: 8px;
       cursor: pointer;
       font-weight: bold;
+      display: none;
     }
     .paused { background: #e74c3c; color: white; }
     .running { background: #2ecc71; color: white; }
-    #error { color: #e74c3c; font-size: 0.8rem; text-align: center; padding: 8px; }
   </style>
 </head>
 <body>
-  <div id="status">Loading...</div>
-  <button id="pauseBtn" disabled>Loading...</button>
-  <div id="error"></div>
+  <div id="status">กำลังโหลด...</div>
+  <button id="pauseBtn"></button>
 
   <script type="module">
     import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
 
     const METADATA_KEY = "com.natwork.dmpause/paused";
-
-    async function lockAllItems(lock) {
-  const myId = await OBR.player.getId();
-  const items = await OBR.scene.items.getAll();
-  
-  // เอาเฉพาะ token ที่ไม่ใช่ของ GM และอยู่บน CHARACTER layer
-  const playerItems = items.filter(item => 
-    item.layer === "CHARACTER" && item.createdUserId !== myId
-  );
-
-  if (playerItems.length === 0) {
-    document.getElementById("error").textContent = "No player tokens found!";
-    return;
-  }
-
-  document.getElementById("error").textContent = "";
-  
-  await OBR.scene.items.updateItems(playerItems, (all) => {
-    for (const item of all) {
-      item.locked = lock;
-    }
-  });
-}
+    const statusEl = document.getElementById("status");
+    const btn = document.getElementById("pauseBtn");
 
     OBR.onReady(async () => {
+      statusEl.textContent = "SDK พร้อมแล้ว...";
+
       const role = await OBR.player.getRole();
+      statusEl.textContent = "Role: " + role;
+
       if (role !== "GM") {
-        document.body.innerHTML = "<p style='color:white;padding:16px'>Only the GM can use this.</p>";
+        statusEl.textContent = "❌ เฉพาะ GM เท่านั้น";
         return;
       }
 
+      // โหลดสถานะ
       const metadata = await OBR.room.getMetadata();
       let isPaused = metadata[METADATA_KEY] ?? false;
       updateUI(isPaused);
+      btn.style.display = "block";
 
-      const btn = document.getElementById("pauseBtn");
-      btn.disabled = false;
-
+      // ติดตาม metadata
       OBR.room.onMetadataChange((meta) => {
         isPaused = meta[METADATA_KEY] ?? false;
         updateUI(isPaused);
       });
 
+      // กดปุ่ม
       btn.addEventListener("click", async () => {
         isPaused = !isPaused;
+        statusEl.textContent = isPaused ? "🔴 Pausing..." : "🟢 Resuming...";
+
         await OBR.room.setMetadata({ [METADATA_KEY]: isPaused });
-        await lockAllItems(isPaused);
+
+        // lock/unlock ทุก item ใน CHARACTER layer
+        const items = await OBR.scene.items.getAll();
+        const targets = items.filter(i => i.layer === "CHARACTER");
+
+        if (targets.length > 0) {
+          await OBR.scene.items.updateItems(targets, (all) => {
+            for (const item of all) {
+              item.locked = isPaused;
+            }
+          });
+        }
+
+        statusEl.textContent = isPaused ? "🔴 หยุดแล้ว" : "🟢 ดำเนินต่อ";
+        updateUI(isPaused);
+
         OBR.notification.show(
-          isPaused ? "⏸ Game Paused! Players cannot move tokens." : "▶ Game Resumed!",
+          isPaused ? "⏸ Game Paused!" : "▶ Game Resumed!",
           isPaused ? "WARNING" : "SUCCESS"
         );
       });
     });
+
+    function updateUI(isPaused) {
+      if (isPaused) {
+        btn.textContent = "▶ Resume";
+        btn.className = "paused";
+        statusEl.textContent = "🔴 Game is PAUSED";
+      } else {
+        btn.textContent = "⏸ Pause";
+        btn.className = "running";
+        statusEl.textContent = "🟢 Game is Running";
+      }
+    }
   </script>
 </body>
 </html>
