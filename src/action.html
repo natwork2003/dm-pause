@@ -30,67 +30,14 @@
   </style>
 </head>
 <body>
-  <div id="status">กำลังโหลด...</div>
+  <div id="status">Connecting...</div>
   <button id="pauseBtn"></button>
 
-  <script type="module">
-    import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/+esm";
-
+  <script src="https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@latest/dist/browser/index.js"></script>
+  <script>
     const METADATA_KEY = "com.natwork.dmpause/paused";
     const statusEl = document.getElementById("status");
     const btn = document.getElementById("pauseBtn");
-
-    OBR.onReady(async () => {
-      statusEl.textContent = "SDK พร้อมแล้ว...";
-
-      const role = await OBR.player.getRole();
-      statusEl.textContent = "Role: " + role;
-
-      if (role !== "GM") {
-        statusEl.textContent = "❌ เฉพาะ GM เท่านั้น";
-        return;
-      }
-
-      // โหลดสถานะ
-      const metadata = await OBR.room.getMetadata();
-      let isPaused = metadata[METADATA_KEY] ?? false;
-      updateUI(isPaused);
-      btn.style.display = "block";
-
-      // ติดตาม metadata
-      OBR.room.onMetadataChange((meta) => {
-        isPaused = meta[METADATA_KEY] ?? false;
-        updateUI(isPaused);
-      });
-
-      // กดปุ่ม
-      btn.addEventListener("click", async () => {
-        isPaused = !isPaused;
-        statusEl.textContent = isPaused ? "🔴 Pausing..." : "🟢 Resuming...";
-
-        await OBR.room.setMetadata({ [METADATA_KEY]: isPaused });
-
-        // lock/unlock ทุก item ใน CHARACTER layer
-        const items = await OBR.scene.items.getAll();
-        const targets = items.filter(i => i.layer === "CHARACTER");
-
-        if (targets.length > 0) {
-          await OBR.scene.items.updateItems(targets, (all) => {
-            for (const item of all) {
-              item.locked = isPaused;
-            }
-          });
-        }
-
-        statusEl.textContent = isPaused ? "🔴 หยุดแล้ว" : "🟢 ดำเนินต่อ";
-        updateUI(isPaused);
-
-        OBR.notification.show(
-          isPaused ? "⏸ Game Paused!" : "▶ Game Resumed!",
-          isPaused ? "WARNING" : "SUCCESS"
-        );
-      });
-    });
 
     function updateUI(isPaused) {
       if (isPaused) {
@@ -102,7 +49,47 @@
         btn.className = "running";
         statusEl.textContent = "🟢 Game is Running";
       }
+      btn.style.display = "block";
     }
+
+    OBR.onReady(async () => {
+      const role = await OBR.player.getRole();
+
+      if (role !== "GM") {
+        statusEl.textContent = "❌ GM only";
+        return;
+      }
+
+      const metadata = await OBR.room.getMetadata();
+      let isPaused = metadata[METADATA_KEY] ?? false;
+      updateUI(isPaused);
+
+      OBR.room.onMetadataChange((meta) => {
+        isPaused = meta[METADATA_KEY] ?? false;
+        updateUI(isPaused);
+      });
+
+      btn.addEventListener("click", async () => {
+        isPaused = !isPaused;
+        await OBR.room.setMetadata({ [METADATA_KEY]: isPaused });
+
+        const items = await OBR.scene.items.getAll();
+        const targets = items.filter(i => i.layer === "CHARACTER");
+        if (targets.length > 0) {
+          await OBR.scene.items.updateItems(targets, (all) => {
+            for (const item of all) {
+              item.locked = isPaused;
+            }
+          });
+        }
+
+        OBR.notification.show(
+          isPaused ? "⏸ Game Paused!" : "▶ Game Resumed!",
+          isPaused ? "WARNING" : "SUCCESS"
+        );
+        updateUI(isPaused);
+      });
+    });
   </script>
 </body>
 </html>
