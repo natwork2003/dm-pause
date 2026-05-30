@@ -5,38 +5,37 @@
     import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@3.1.0/+esm";
 
     const METADATA_KEY = "com.natwork.dmpause/paused";
-    const OVERLAY_URL = "https://natwork2003.github.io/dm-pause/src/overlay.html";
 
     OBR.onReady(async () => {
       const role = await OBR.player.getRole();
 
       async function setOverlay(show) {
         if (role === "GM") return;
-        if (show) {
-          await OBR.popover.open({
-            id: "com.natwork.dmpause/overlay",
-            url: OVERLAY_URL,
-            height: 600,
-            width: 800,
-            disablePointerEvents: true
-          });
-        } else {
-          await OBR.popover.close("com.natwork.dmpause/overlay");
+        try {
+          if (show) {
+            await OBR.modal.open({
+              id: "com.natwork.dmpause/overlay",
+              url: "https://natwork2003.github.io/dm-pause/src/overlay.html",
+              height: 600,
+              width: 800
+            });
+          } else {
+            await OBR.modal.close("com.natwork.dmpause/overlay");
+          }
+        } catch(e) {
+          console.log("modal error:", e);
         }
       }
 
-      // เช็คสถานะตอนโหลด
       const metadata = await OBR.room.getMetadata();
       const isPaused = metadata[METADATA_KEY] ?? false;
-      setOverlay(isPaused);
+      if (isPaused) setOverlay(true);
 
-      // ติดตาม metadata
       OBR.room.onMetadataChange((meta) => {
         const paused = meta[METADATA_KEY] ?? false;
         setOverlay(paused);
       });
 
-      // รับ broadcast
       OBR.broadcast.onMessage("com.natwork.dmpause/notify", (event) => {
         const paused = event.data?.paused;
         OBR.notification.show(
