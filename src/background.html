@@ -5,25 +5,47 @@
     import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@3.1.0/+esm";
 
     const METADATA_KEY = "com.natwork.dmpause/paused";
+    const OVERLAY_ID = "com.natwork.dmpause/overlay";
+    const OVERLAY_URL = "https://natwork2003.github.io/dm-pause/src/overlay.html";
 
     OBR.onReady(async () => {
       const role = await OBR.player.getRole();
 
-      async function setOverlay(show) {
-        if (role === "GM") return;
+      async function openModal() {
         try {
-          if (show) {
-            await OBR.modal.open({
-            id: "com.natwork.dmpause/overlay",
-            url: "https://natwork2003.github.io/dm-pause/src/overlay.html",
+          await OBR.modal.open({
+            id: OVERLAY_ID,
+            url: OVERLAY_URL,
             height: 2000,
-            width: 4000,
-            });
-          } else {
-            await OBR.modal.close("com.natwork.dmpause/overlay");
-          }
+            width: 4000
+          });
         } catch(e) {
           console.log("modal error:", e);
+        }
+      }
+
+      async function closeModal() {
+        try {
+          await OBR.modal.close(OVERLAY_ID);
+        } catch(e) {}
+      }
+
+      async function setOverlay(show) {
+        if (role === "GM") return;
+        if (show) {
+          await openModal();
+          // reopen ทุก 500ms ถ้ายัง pause อยู่
+          const interval = setInterval(async () => {
+            const meta = await OBR.room.getMetadata();
+            const stillPaused = meta[METADATA_KEY] ?? false;
+            if (!stillPaused) {
+              clearInterval(interval);
+              return;
+            }
+            await openModal();
+          }, 500);
+        } else {
+          await closeModal();
         }
       }
 
