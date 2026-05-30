@@ -41,24 +41,40 @@
     const btn = document.getElementById("pauseBtn");
 
     function updateUI(isPaused) {
-      if (isPaused) {
-        btn.textContent = "▶ Resume";
-        btn.className = "paused";
-        statusEl.textContent = "🔴 Game is PAUSED";
-      } else {
-        btn.textContent = "⏸ Pause";
-        btn.className = "running";
-        statusEl.textContent = "🟢 Game is Running";
-      }
+      btn.textContent = isPaused ? "▶ Resume" : "⏸ Pause";
+      btn.className = isPaused ? "paused" : "running";
+      statusEl.textContent = isPaused ? "🔴 Game is PAUSED" : "🟢 Game is Running";
       btn.style.display = "block";
     }
 
+    async function applyLock(isPaused) {
+      const gmId = await OBR.player.getId();
+      const items = await OBR.scene.items.getItems();
+
+      // lock ทุก item ยกเว้นของ GM
+      const targets = items.filter(i => i.createdUserId !== gmId);
+
+      if (targets.length > 0) {
+        await OBR.scene.items.updateItems(targets, (all) => {
+          for (const item of all) {
+            item.locked = isPaused;
+          }
+        });
+      }
+
+      // broadcast notification ให้ทุกคนเห็น
+      await OBR.broadcast.sendMessage(
+        "com.natwork.dmpause/notify",
+        { paused: isPaused },
+        { destination: "ALL" }
+      );
+    }
+
     OBR.onReady(async () => {
-      console.log("items API:", Object.keys(OBR.scene.items)); // เพิ่มบรรทัดนี้
       const role = await OBR.player.getRole();
 
       if (role !== "GM") {
-        statusEl.textContent = "❌ DM only";
+        statusEl.textContent = "❌ GM only";
         return;
       }
 
@@ -73,23 +89,18 @@
 
       btn.addEventListener("click", async () => {
         isPaused = !isPaused;
-        await OBR.room.setMetadata({ [METADATA_KEY]: isPaused });
+        btn.disabled = true;
 
-        const items = await OBR.scene.items.getItems();
-        const targets = items.filter(i => i.layer === "CHARACTER");
-        if (targets.length > 0) {
-          await OBR.scene.items.updateItems(targets, (all) => {
-            for (const item of all) {
-              item.locked = isPaused;
-            }
-          });
-        }
+        await OBR.room.setMetadata({ [METADATA_KEY]: isPaused });
+        await applyLock(isPaused);
 
         OBR.notification.show(
           isPaused ? "⏸ Game Paused!" : "▶ Game Resumed!",
           isPaused ? "WARNING" : "SUCCESS"
         );
+
         updateUI(isPaused);
+        btn.disabled = false;
       });
     });
   </script>

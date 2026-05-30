@@ -10,5 +10,8 @@
     "popover": "https://natwork2003.github.io/dm-pause/src/action.html",
     "height": 200,
     "width": 250
-  }
+  },
+  "backgrounds": [
+    "https://natwork2003.github.io/dm-pause/src/background.js"
+  ]
 }   
