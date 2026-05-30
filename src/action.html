@@ -41,12 +41,6 @@
     const statusEl = document.getElementById("status");
     const btn = document.getElementById("pauseBtn");
 
-    // permission types ทั้งหมดที่จะ disable
-    const ITEM_TYPES = [
-      "ATTACHMENT", "NOTE", "DRAWING", "RULER", "POINTER", "TEXT",
-      "IMAGE", "SHAPE", "CURVE", "LINE", "FOG", "PROP", "MOUNT"
-    ];
-
     function updateUI(isPaused) {
       btn.textContent = isPaused ? "▶ Resume" : "⏸ Pause";
       btn.className = isPaused ? "paused" : "running";
@@ -55,20 +49,22 @@
     }
 
     async function applyLock(isPaused) {
+      const gmId = await OBR.player.getId();
       const items = await OBR.scene.items.getItems();
 
       if (isPaused) {
         // เก็บ ID ของ item ที่ lock อยู่แล้วก่อน pause
         const alreadyLocked = items.filter(i => i.locked).map(i => i.id);
 
-        // lock ทุก item
-        await OBR.scene.items.updateItems(items, (all) => {
-          for (const item of all) {
-            item.locked = true;
-          }
-        });
-
-       
+        // lock เฉพาะ item ที่ไม่ใช่ของ GM
+        const tolock = items.filter(i => i.createdUserId !== gmId);
+        if (tolock.length > 0) {
+          await OBR.scene.items.updateItems(tolock, (all) => {
+            for (const item of all) {
+              item.locked = true;
+            }
+          });
+        }
 
         await OBR.room.setMetadata({
           [METADATA_KEY]: true,
@@ -76,19 +72,20 @@
         });
 
       } else {
-        // ดึง list ของที่ lock ไว้ก่อน pause
         const metadata = await OBR.room.getMetadata();
         const wasLocked = metadata[LOCKED_KEY] ?? [];
 
-        // unlock เฉพาะที่ไม่ได้ lock อยู่ก่อนหน้า
-        await OBR.scene.items.updateItems(items, (all) => {
-          for (const item of all) {
-            if (!wasLocked.includes(item.id)) {
+        const items2 = await OBR.scene.items.getItems();
+        const tounlock = items2.filter(
+          i => i.createdUserId !== gmId && !wasLocked.includes(i.id)
+        );
+        if (tounlock.length > 0) {
+          await OBR.scene.items.updateItems(tounlock, (all) => {
+            for (const item of all) {
               item.locked = false;
             }
-          }
-        });
-
+          });
+        }
 
         await OBR.room.setMetadata({
           [METADATA_KEY]: false,
@@ -96,7 +93,6 @@
         });
       }
 
-      // broadcast ให้ player เห็น overlay
       await OBR.broadcast.sendMessage(
         "com.natwork.dmpause/notify",
         { paused: isPaused },
@@ -107,7 +103,7 @@
     OBR.onReady(async () => {
       const role = await OBR.player.getRole();
       if (role !== "GM") {
-        statusEl.textContent = "❌ DM only";
+        statusEl.textContent = "❌ GM only";
         return;
       }
 

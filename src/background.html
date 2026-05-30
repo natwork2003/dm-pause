@@ -5,67 +5,44 @@
     import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@3.1.0/+esm";
 
     const METADATA_KEY = "com.natwork.dmpause/paused";
-    let isPaused = false;
-    let itemSnapshot = {};
+    const OVERLAY_URL = "https://natwork2003.github.io/dm-pause/src/overlay.html";
 
     OBR.onReady(async () => {
       const role = await OBR.player.getRole();
 
-      // โหลดสถานะเริ่มต้น
-      const metadata = await OBR.room.getMetadata();
-      isPaused = metadata[METADATA_KEY] ?? false;
-
-      // ติดตาม metadata
-      OBR.room.onMetadataChange((meta) => {
-        isPaused = meta[METADATA_KEY] ?? false;
-        if (isPaused) takeSnapshot();
-      });
-
-      // เก็บ snapshot ตำแหน่งปัจจุบัน
-      async function takeSnapshot() {
-        const items = await OBR.scene.items.getItems();
-        itemSnapshot = {};
-        for (const item of items) {
-          itemSnapshot[item.id] = {
-            position: { ...item.position },
-            rotation: item.rotation
-          };
+      async function setOverlay(show) {
+        if (role === "GM") return;
+        if (show) {
+          await OBR.popover.open({
+            id: "com.natwork.dmpause/overlay",
+            url: OVERLAY_URL,
+            height: 600,
+            width: 800,
+            disablePointerEvents: true
+          });
+        } else {
+          await OBR.popover.close("com.natwork.dmpause/overlay");
         }
       }
 
-      // ถ้าเป็น player ให้ revert การขยับ
-      if (role !== "GM") {
-        if (isPaused) takeSnapshot();
+      // เช็คสถานะตอนโหลด
+      const metadata = await OBR.room.getMetadata();
+      const isPaused = metadata[METADATA_KEY] ?? false;
+      setOverlay(isPaused);
 
-        OBR.scene.items.onChange(async (items) => {
-          if (!isPaused) return;
+      // ติดตาม metadata
+      OBR.room.onMetadataChange((meta) => {
+        const paused = meta[METADATA_KEY] ?? false;
+        setOverlay(paused);
+      });
 
-          const myId = await OBR.player.getId();
-          const movedByMe = items.filter(
-            i => i.lastModifiedUserId === myId && itemSnapshot[i.id]
-          );
-
-          if (movedByMe.length > 0) {
-            await OBR.scene.items.updateItems(movedByMe, (all) => {
-              for (const item of all) {
-                if (itemSnapshot[item.id]) {
-                  item.position = itemSnapshot[item.id].position;
-                  item.rotation = itemSnapshot[item.id].rotation;
-                }
-              }
-            });
-          }
-        });
-      }
-
-      // รับ broadcast แสดง notification
+      // รับ broadcast
       OBR.broadcast.onMessage("com.natwork.dmpause/notify", (event) => {
         const paused = event.data?.paused;
         OBR.notification.show(
           paused ? "⏸ Game Paused by DM!" : "▶ Game Resumed!",
           paused ? "WARNING" : "SUCCESS"
         );
-        if (paused) takeSnapshot();
       });
     });
   </script>
