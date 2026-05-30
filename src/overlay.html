@@ -12,30 +12,38 @@
       align-items: center;
       justify-content: center;
       color: white;
-      font-family: sans-serif;
+      font-family: 'Georgia', serif;
       text-align: center;
-      gap: 12px;
+      gap: 16px;
       overflow: hidden;
-      user-select: none;
+    }
+    .icon {
+      font-size: 4rem;
+      animation: pulse 2s infinite;
     }
     h1 {
-      font-size: 3rem;
-      letter-spacing: 6px;
-      text-shadow: 0 0 30px rgba(231, 76, 60, 0.8);
+      font-size: 2.5rem;
+      font-weight: bold;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      text-shadow: 
+        0 0 20px rgba(231, 76, 60, 1),
+        0 0 40px rgba(231, 76, 60, 0.5);
     }
-    p { opacity: 0.7; font-size: 1.2rem; }
+    p {
+      font-size: 1rem;
+      opacity: 0.6;
+      letter-spacing: 2px;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.95); }
+    }
   </style>
 </head>
 <body>
-  <h1>⏸ GAME PAUSED</h1>
+  <div class="icon">⏸</div>
+  <h1>Game Paused</h1>
   <p>Waiting for the DM...</p>
-  <script>
-    // ดัก click ทุกอย่างไม่ให้ผ่าน
-    document.addEventListener('click', e => e.stopPropagation());
-    document.addEventListener('mousedown', e => e.stopPropagation());
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') e.preventDefault();
-    });
-  </script>
 </body>
 </html>
