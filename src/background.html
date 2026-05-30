@@ -14,11 +14,13 @@
         try {
           if (show) {
             await OBR.modal.open({
-              id: "com.natwork.dmpause/overlay",
-              url: "https://natwork2003.github.io/dm-pause/src/overlay.html",
-              height: 600,
-              width: 800
+                id: "com.natwork.dmpause/overlay",
+                url: "https://natwork2003.github.io/dm-pause/src/overlay.html",
+                height: 600,
+                width: 800,
+                disableClose: true  // เพิ่มบรรทัดนี้
             });
+
           } else {
             await OBR.modal.close("com.natwork.dmpause/overlay");
           }
