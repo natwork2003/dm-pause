@@ -4,8 +4,8 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
-      width: 100%;
-      height: 100%;
+      width: 100vw;
+      height: 100vh;
       background: rgba(0, 0, 0, 0.5);
       display: flex;
       flex-direction: column;
@@ -16,20 +16,26 @@
       text-align: center;
       gap: 12px;
       overflow: hidden;
+      user-select: none;
     }
     h1 {
       font-size: 3rem;
       letter-spacing: 6px;
       text-shadow: 0 0 30px rgba(231, 76, 60, 0.8);
     }
-    p {
-      opacity: 0.7;
-      font-size: 1.2rem;
-    }
+    p { opacity: 0.7; font-size: 1.2rem; }
   </style>
 </head>
 <body>
   <h1>⏸ GAME PAUSED</h1>
   <p>Waiting for the DM...</p>
+  <script>
+    // ดัก click ทุกอย่างไม่ให้ผ่าน
+    document.addEventListener('click', e => e.stopPropagation());
+    document.addEventListener('mousedown', e => e.stopPropagation());
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') e.preventDefault();
+    });
+  </script>
 </body>
 </html>
