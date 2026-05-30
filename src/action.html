@@ -68,12 +68,7 @@
           }
         });
 
-        // ปิด permission Create/Update ของ player ทุก type
-        const permissions = {};
-        for (const type of ITEM_TYPES) {
-          permissions[type] = { create: false, update: false, delete: false };
-        }
-        await OBR.room.setPermissions(permissions);
+       
 
         await OBR.room.setMetadata({
           [METADATA_KEY]: true,
@@ -94,12 +89,6 @@
           }
         });
 
-        // คืน permission ทุก type
-        const permissions = {};
-        for (const type of ITEM_TYPES) {
-          permissions[type] = { create: true, update: true, delete: true };
-        }
-        await OBR.room.setPermissions(permissions);
 
         await OBR.room.setMetadata({
           [METADATA_KEY]: false,
@@ -118,7 +107,7 @@
     OBR.onReady(async () => {
       const role = await OBR.player.getRole();
       if (role !== "GM") {
-        statusEl.textContent = "❌ GM only";
+        statusEl.textContent = "❌ DM only";
         return;
       }
 
