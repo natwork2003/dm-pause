@@ -41,6 +41,12 @@
     const statusEl = document.getElementById("status");
     const btn = document.getElementById("pauseBtn");
 
+    // permission types ทั้งหมดที่จะ disable
+    const ITEM_TYPES = [
+      "ATTACHMENT", "NOTE", "DRAWING", "RULER", "POINTER", "TEXT",
+      "IMAGE", "SHAPE", "CURVE", "LINE", "FOG", "PROP", "MOUNT"
+    ];
+
     function updateUI(isPaused) {
       btn.textContent = isPaused ? "▶ Resume" : "⏸ Pause";
       btn.className = isPaused ? "paused" : "running";
@@ -53,16 +59,21 @@
 
       if (isPaused) {
         // เก็บ ID ของ item ที่ lock อยู่แล้วก่อน pause
-        const alreadyLocked = items
-          .filter(i => i.locked)
-          .map(i => i.id);
+        const alreadyLocked = items.filter(i => i.locked).map(i => i.id);
 
-        // lock ทุก item ทั้งหมด
+        // lock ทุก item
         await OBR.scene.items.updateItems(items, (all) => {
           for (const item of all) {
             item.locked = true;
           }
         });
+
+        // ปิด permission Create/Update ของ player ทุก type
+        const permissions = {};
+        for (const type of ITEM_TYPES) {
+          permissions[type] = { create: false, update: false, delete: false };
+        }
+        await OBR.room.setPermissions(permissions);
 
         await OBR.room.setMetadata({
           [METADATA_KEY]: true,
@@ -83,13 +94,20 @@
           }
         });
 
+        // คืน permission ทุก type
+        const permissions = {};
+        for (const type of ITEM_TYPES) {
+          permissions[type] = { create: true, update: true, delete: true };
+        }
+        await OBR.room.setPermissions(permissions);
+
         await OBR.room.setMetadata({
           [METADATA_KEY]: false,
           [LOCKED_KEY]: []
         });
       }
 
-      // broadcast ให้ทุกคนเห็น notification
+      // broadcast ให้ player เห็น overlay
       await OBR.broadcast.sendMessage(
         "com.natwork.dmpause/notify",
         { paused: isPaused },
@@ -99,9 +117,8 @@
 
     OBR.onReady(async () => {
       const role = await OBR.player.getRole();
-
       if (role !== "GM") {
-        statusEl.textContent = "❌ DM only";
+        statusEl.textContent = "❌ GM only";
         return;
       }
 
@@ -117,14 +134,11 @@
       btn.addEventListener("click", async () => {
         isPaused = !isPaused;
         btn.disabled = true;
-
         await applyLock(isPaused);
-
         OBR.notification.show(
           isPaused ? "⏸ Game Paused!" : "▶ Game Resumed!",
           isPaused ? "WARNING" : "SUCCESS"
         );
-
         updateUI(isPaused);
         btn.disabled = false;
       });
