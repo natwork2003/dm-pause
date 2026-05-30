@@ -4,47 +4,68 @@
   <script type="module">
     import OBR from "https://cdn.jsdelivr.net/npm/@owlbear-rodeo/sdk@3.1.0/+esm";
 
+    const METADATA_KEY = "com.natwork.dmpause/paused";
+    let isPaused = false;
+    let itemSnapshot = {};
+
     OBR.onReady(async () => {
       const role = await OBR.player.getRole();
 
-      // สร้าง overlay element
-      const overlay = document.createElement("div");
-      overlay.style.cssText = `
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.75);
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 99999;
-        color: white;
-        font-family: sans-serif;
-        pointer-events: none;
-      `;
-      overlay.innerHTML = `
-        <div style="font-size: 3rem; font-weight: bold; letter-spacing: 4px;">⏸ GAME PAUSED</div>
-        <div style="font-size: 1rem; margin-top: 12px; opacity: 0.7;">Waiting for the DM...</div>
-      `;
-      document.body.appendChild(overlay);
+      // โหลดสถานะเริ่มต้น
+      const metadata = await OBR.room.getMetadata();
+      isPaused = metadata[METADATA_KEY] ?? false;
 
-      function showOverlay(show) {
-        overlay.style.display = show ? "flex" : "none";
+      // ติดตาม metadata
+      OBR.room.onMetadataChange((meta) => {
+        isPaused = meta[METADATA_KEY] ?? false;
+        if (isPaused) takeSnapshot();
+      });
+
+      // เก็บ snapshot ตำแหน่งปัจจุบัน
+      async function takeSnapshot() {
+        const items = await OBR.scene.items.getItems();
+        itemSnapshot = {};
+        for (const item of items) {
+          itemSnapshot[item.id] = {
+            position: { ...item.position },
+            rotation: item.rotation
+          };
+        }
       }
 
-      // เช็คสถานะตอนโหลด
-      const metadata = await OBR.room.getMetadata();
-      const isPaused = metadata["com.natwork.dmpause/paused"] ?? false;
-      if (role !== "GM") showOverlay(isPaused);
+      // ถ้าเป็น player ให้ revert การขยับ
+      if (role !== "GM") {
+        if (isPaused) takeSnapshot();
 
-      // รับ broadcast จาก GM
+        OBR.scene.items.onChange(async (items) => {
+          if (!isPaused) return;
+
+          const myId = await OBR.player.getId();
+          const movedByMe = items.filter(
+            i => i.lastModifiedUserId === myId && itemSnapshot[i.id]
+          );
+
+          if (movedByMe.length > 0) {
+            await OBR.scene.items.updateItems(movedByMe, (all) => {
+              for (const item of all) {
+                if (itemSnapshot[item.id]) {
+                  item.position = itemSnapshot[item.id].position;
+                  item.rotation = itemSnapshot[item.id].rotation;
+                }
+              }
+            });
+          }
+        });
+      }
+
+      // รับ broadcast แสดง notification
       OBR.broadcast.onMessage("com.natwork.dmpause/notify", (event) => {
-        const isPaused = event.data?.paused;
+        const paused = event.data?.paused;
         OBR.notification.show(
-          isPaused ? "⏸ Game Paused by DM!" : "▶ Game Resumed!",
-          isPaused ? "WARNING" : "SUCCESS"
+          paused ? "⏸ Game Paused by DM!" : "▶ Game Resumed!",
+          paused ? "WARNING" : "SUCCESS"
         );
-        if (role !== "GM") showOverlay(isPaused);
+        if (paused) takeSnapshot();
       });
     });
   </script>
