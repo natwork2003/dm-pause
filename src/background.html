@@ -8,20 +8,33 @@
     const OVERLAY_ID = "com.natwork.dmpause/overlay";
     const OVERLAY_URL = "https://natwork2003.github.io/dm-pause/src/overlay.html";
 
+    let isPaused = false;
+    let snapshot = {};
+
     OBR.onReady(async () => {
       const role = await OBR.player.getRole();
+
+      // เก็บ snapshot ตำแหน่ง items ทั้งหมด
+      async function takeSnapshot() {
+        const items = await OBR.scene.items.getItems();
+        snapshot = {};
+        for (const item of items) {
+          snapshot[item.id] = {
+            position: { ...item.position },
+            rotation: item.rotation
+          };
+        }
+      }
 
       async function openModal() {
         try {
           await OBR.modal.open({
             id: OVERLAY_ID,
             url: OVERLAY_URL,
-            height: 400,
-            width: 800
+            height: 2000,
+            width: 4000
           });
-        } catch(e) {
-          console.log("modal error:", e);
-        }
+        } catch(e) {}
       }
 
       async function closeModal() {
@@ -34,7 +47,6 @@
         if (role === "GM") return;
         if (show) {
           await openModal();
-          // reopen ทุก 500ms ถ้ายัง pause อยู่
           const interval = setInterval(async () => {
             const meta = await OBR.room.getMetadata();
             const stillPaused = meta[METADATA_KEY] ?? false;
@@ -49,17 +61,44 @@
         }
       }
 
-      const metadata = await OBR.room.getMetadata();
-      const isPaused = metadata[METADATA_KEY] ?? false;
-      if (isPaused) setOverlay(true);
+      // revert items ถ้า player ขยับตอน pause
+      if (role !== "GM") {
+        OBR.scene.items.onChange(async (items) => {
+          if (!isPaused) return;
+          const myId = await OBR.player.getId();
+          const moved = items.filter(
+            i => i.lastModifiedUserId === myId && snapshot[i.id]
+          );
+          if (moved.length > 0) {
+            await OBR.scene.items.updateItems(moved, (all) => {
+              for (const item of all) {
+                if (snapshot[item.id]) {
+                  item.position = { ...snapshot[item.id].position };
+                  item.rotation = snapshot[item.id].rotation;
+                }
+              }
+            });
+          }
+        });
+      }
 
-      OBR.room.onMetadataChange((meta) => {
-        const paused = meta[METADATA_KEY] ?? false;
-        setOverlay(paused);
+      // โหลดสถานะเริ่มต้น
+      const metadata = await OBR.room.getMetadata();
+      isPaused = metadata[METADATA_KEY] ?? false;
+      if (isPaused) {
+        await takeSnapshot();
+        setOverlay(true);
+      }
+
+      OBR.room.onMetadataChange(async (meta) => {
+        isPaused = meta[METADATA_KEY] ?? false;
+        if (isPaused) await takeSnapshot();
+        setOverlay(isPaused);
       });
 
-      OBR.broadcast.onMessage("com.natwork.dmpause/notify", (event) => {
+      OBR.broadcast.onMessage("com.natwork.dmpause/notify", async (event) => {
         const paused = event.data?.paused;
+        if (paused) await takeSnapshot();
         OBR.notification.show(
           paused ? "⏸ Game Paused by DM!" : "▶ Game Resumed!",
           paused ? "WARNING" : "SUCCESS"
